@@ -10,16 +10,16 @@ A collection of powerful utilities designed to enhance your experience with Curs
 This repository contains five specialized tools to help developers get the most out of Cursor IDE by improving AI context, managing ignored files, analyzing dependencies, and more.
 
 ## Tools
-
 ### 1. `cr` (Cursor Rules)
 
-**Purpose**: Automatically generates and updates `.cursorrules` files to provide better context to Cursor's AI about your project structure.
+**Purpose**: Generates a `.cursorrules` template file to help you get started creating your own rules, providing better context to Cursor's AI.
 
 **Features**:
 - Creates a directory tree structure for your project
 - Maintains a system prompt in your `.cursorrules` file
 - Watches for file system changes to automatically update rules
 - Respects `.cursorignore` patterns
+- Creates a `.cursorrules` file with a basic template.
 
 **Usage**:
 ```bash
@@ -59,7 +59,7 @@ This repository contains five specialized tools to help developers get the most 
 
 ### 3. `cb` (Codebase)
 
-**Purpose**: Generates comprehensive snapshots of your codebase in a structured format with XML-like tags, providing better context for AI tools.
+**Purpose**: Generates comprehensive snapshots of your codebase in a structured format with XML-like tags, making it easy to share your project with chatbots like ChatGPT or Claude.
 
 **Features**:
 - Creates a markdown file with your entire codebase structure
@@ -85,7 +85,7 @@ This repository contains five specialized tools to help developers get the most 
 
 ### 4. `analyze_dependencies`
 
-**Purpose**: Analyzes project dependencies using Claude AI to identify outdated packages and version gaps.
+**Purpose**: Analyzes project dependencies using Claude 3.7 Sonnet to identify outdated packages and version gaps.
 
 **Features**:
 - Finds and analyzes `package.json` and `requirements.txt` files
@@ -152,18 +152,15 @@ chmod +x ci cr cb analyze_dependencies url-to-md
 
 Cursor IDE uses AI to understand your codebase and provide intelligent code suggestions. These tools enhance that experience by:
 
-1. **Providing Better Context**: The `cr` and `cb` tools give Cursor's AI more information about your project structure.
+1. **Providing Better Context**: The `cr` tool creates a `.cursorrules` template file to help get you started creating your own rules.
 2. **Focusing AI Analysis**: The `ci` tool helps exclude irrelevant files from analysis.
 3. **Maintaining Dependencies**: The `analyze_dependencies` tool helps keep your project dependencies up-to-date.
 4. **Improving Documentation**: The `url-to-md` tool helps create Markdown documentation from web content.
+5. **Codebase Snapshot**: The `cb` tool creates a snapshot of your codebase with XML-like tags to easily share your project with chatbots like chatGPT or Claude.
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Author
 
