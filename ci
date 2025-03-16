@@ -1,0 +1,121 @@
+#!/bin/bash
+
+function show_help {
+    echo "Usage: ci [OPTIONS]"
+    echo "Manage .cursorignore file in the current directory."
+    echo ""
+    echo "Without options: creates a .cursorignore file with saved patterns"
+    echo ""
+    echo "Options:"
+    echo "  --add PATTERN    Add a pattern to .cursorignore and save it"
+    echo "  --remove PATTERN Remove a pattern from .cursorignore and saved patterns"
+    echo "  --list           List all saved patterns"
+    echo "  --help           Display this help message"
+}
+
+CURSORIGNORE_FILE=".cursorignore"
+PATTERNS_FILE="${HOME}/.ci_saved_patterns"
+
+# Initialize patterns file if it doesn't exist
+if [[ ! -f "$PATTERNS_FILE" ]]; then
+    touch "$PATTERNS_FILE"
+fi
+
+# Handle help option
+if [[ "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
+# List saved patterns
+if [[ "$1" == "--list" ]]; then
+    if [[ ! -s "$PATTERNS_FILE" ]]; then
+        echo "No patterns are currently saved"
+    else
+        echo "Saved patterns:"
+        cat "$PATTERNS_FILE"
+    fi
+    exit 0
+fi
+
+# Create .cursorignore with saved patterns if it doesn't exist and no arguments provided
+if [[ $# -eq 0 ]]; then
+    if [[ ! -f "$CURSORIGNORE_FILE" ]]; then
+        # Create the file with saved patterns
+        if [[ -s "$PATTERNS_FILE" ]]; then
+            cp "$PATTERNS_FILE" "$CURSORIGNORE_FILE"
+            echo "Created .cursorignore file with saved patterns"
+        else
+            touch "$CURSORIGNORE_FILE"
+            echo "Created empty .cursorignore file (no saved patterns)"
+        fi
+    else
+        echo ".cursorignore file already exists"
+    fi
+    exit 0
+fi
+
+# Handle --add option
+if [[ "$1" == "--add" ]]; then
+    if [[ -z "$2" ]]; then
+        echo "Error: No pattern specified to add"
+        echo "Usage: ci --add PATTERN"
+        exit 1
+    fi
+    
+    # Add to saved patterns if not already there
+    if ! grep -q "^$2$" "$PATTERNS_FILE"; then
+        echo "$2" >> "$PATTERNS_FILE"
+        echo "Added '$2' to saved patterns"
+    else
+        echo "Pattern '$2' is already in saved patterns"
+    fi
+    
+    # Create or update .cursorignore file if it exists
+    if [[ -f "$CURSORIGNORE_FILE" ]]; then
+        if ! grep -q "^$2$" "$CURSORIGNORE_FILE"; then
+            echo "$2" >> "$CURSORIGNORE_FILE"
+            echo "Added '$2' to .cursorignore"
+        else
+            echo "Pattern '$2' already exists in .cursorignore"
+        fi
+    fi
+    
+    exit 0
+fi
+
+# Handle --remove option
+if [[ "$1" == "--remove" ]]; then
+    if [[ -z "$2" ]]; then
+        echo "Error: No pattern specified to remove"
+        echo "Usage: ci --remove PATTERN"
+        exit 1
+    fi
+    
+    # Remove from saved patterns
+    if grep -q "^$2$" "$PATTERNS_FILE"; then
+        TEMP_FILE=$(mktemp)
+        grep -v "^$2$" "$PATTERNS_FILE" > "$TEMP_FILE"
+        mv "$TEMP_FILE" "$PATTERNS_FILE"
+        echo "Removed '$2' from saved patterns"
+    else
+        echo "Pattern '$2' not found in saved patterns"
+    fi
+    
+    # Also remove from current .cursorignore if it exists
+    if [[ -f "$CURSORIGNORE_FILE" ]]; then
+        if grep -q "^$2$" "$CURSORIGNORE_FILE"; then
+            TEMP_FILE=$(mktemp)
+            grep -v "^$2$" "$CURSORIGNORE_FILE" > "$TEMP_FILE"
+            mv "$TEMP_FILE" "$CURSORIGNORE_FILE"
+            echo "Removed '$2' from .cursorignore"
+        fi
+    fi
+    
+    exit 0
+fi
+
+# If we get here, an invalid option was provided
+echo "Error: Invalid option '$1'"
+show_help
+exit 1

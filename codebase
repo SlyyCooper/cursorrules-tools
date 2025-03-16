@@ -1,0 +1,380 @@
+#!/usr/bin/env python3
+
+import os
+import fnmatch
+import argparse
+from pathlib import Path
+from typing import List, Set, Dict, Optional
+
+# File path: codebase
+# Purpose: Generate a snapshot of the codebase with files encapsulated in XML-like tags
+# Dependencies: Standard Python libraries (os, fnmatch, argparse, pathlib)
+
+# ===== CONFIGURATION =====
+
+DEFAULT_EXCLUDE_FILES = {
+    "codebase_snapshot.md",
+    "license",
+    "package-lock.json",
+    "yarn.lock",
+    ".gitignore",
+    ".env",
+    ".DS_Store",
+    ".gitattributes",
+    ".cursorrules",
+    "*.egg-info",
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    "*.csv",
+    "*.xlsx",
+    "*.xls",
+    "*.pdf",
+    "*.doc",
+    "*.docx"
+}
+
+DEFAULT_EXCLUDE_DIRS = {
+    ".git",
+    ".idea",
+    ".vscode",
+    "node_modules",
+    "vendor",
+    ".next",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "mydocs",
+    "*.egg-info",
+    "images",
+    "img",
+    "assets/images",
+    "static/images",
+    "cache",
+    "docs",
+    "documents",
+    "spreadsheets",
+    "reports"
+}
+
+BINARY_EXTENSIONS = {
+    '.exe', '.dll', '.so', '.dylib', '.bin', '.jar', '.war', 
+    '.zip', '.tar', '.gz', '.xz', '.bz2', '.7z', '.rar',
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', 
+    '.webp', '.ico', '.tiff', '.tif', '.heic', '.heif',
+    '.raw', '.psd', '.ai', '.eps', '.indd', '.jfif',
+    '.mp3', '.mp4', '.wav', '.flac', '.ogg', '.avi',
+    '.mov', '.mkv', '.webm', '.pyc', '.pyo', '.pyd'
+}
+
+IMAGE_EXTENSIONS = {
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', 
+    '.webp', '.ico', '.tiff', '.tif', '.heic', '.heif',
+    '.raw', '.psd', '.ai', '.eps', '.indd', '.jfif'
+}
+
+DOCUMENT_EXTENSIONS = {
+    # Spreadsheets
+    '.csv', '.xlsx', '.xls', '.xlsm', '.ods',
+    # Documents
+    '.doc', '.docx', '.pdf', '.rtf', '.odt',
+    '.txt', '.pages', '.numbers',
+    # Presentations
+    '.ppt', '.pptx', '.key',
+    # Other
+    '.epub', '.mobi', '.djvu'
+}
+
+LANGUAGE_MAP = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".jsx": "jsx",
+    ".tsx": "tsx",
+    ".html": "html",
+    ".css": "css",
+    ".scss": "scss",
+    ".sass": "sass",
+    ".less": "less",
+    ".sql": "sql",
+    ".sh": "bash",
+    ".md": "markdown",
+    ".json": "json",
+    ".yml": "yaml",
+    ".yaml": "yaml",
+    ".xml": "xml",
+    ".java": "java",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".h": "c",
+    ".hpp": "cpp",
+    ".go": "go",
+    ".rb": "ruby",
+    ".rs": "rust",
+    ".php": "php",
+    ".swift": "swift",
+    ".kt": "kotlin",
+    ".dart": "dart",
+    ".lua": "lua",
+    ".r": "r",
+    ".pl": "perl",
+    ".cs": "csharp",
+    ".fs": "fsharp",
+    ".toml": "toml",
+    ".ini": "ini",
+    ".cfg": "ini",
+    ".conf": "ini",
+    ".bat": "batch",
+    ".ps1": "powershell",
+    ".dockerfile": "dockerfile",
+    ".vue": "vue",
+    ".svelte": "svelte",
+    ".graphql": "graphql",
+    ".proto": "protobuf"
+}
+
+# ===== UTILITY FUNCTIONS =====
+
+def get_language(file_extension: str) -> str:
+    """Get the language identifier for syntax highlighting based on file extension."""
+    return LANGUAGE_MAP.get(file_extension.lower(), "")
+
+def is_image_file(filename: str) -> bool:
+    """Check if a file is an image based on its extension."""
+    return os.path.splitext(filename)[1].lower() in IMAGE_EXTENSIONS
+
+def is_document_file(filename: str, include_markdown: bool = False) -> bool:
+    """Check if a file is a document type that should be excluded."""
+    extensions = DOCUMENT_EXTENSIONS.copy()
+    
+    # Only add .md to document extensions if we're not including markdown
+    if not include_markdown:
+        extensions.add('.md')
+    
+    ext = os.path.splitext(filename)[1].lower()
+    is_doc = ext in extensions
+    
+    # Debug print
+    if is_doc:
+        print(f"File '{filename}' has document extension '{ext}'")
+    
+    return is_doc
+
+def load_ignore_patterns(exclude_files: Set[str], exclude_dirs: Set[str]) -> Set[str]:
+    """Load ignore patterns from exclude sets and .cursorignore file if it exists"""
+    # Combine exclude files and dirs
+    patterns = set(exclude_files) | set(exclude_dirs)
+    
+    try:
+        with open('.cursorignore', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    # Remove leading slash if present
+                    if line.startswith('/'):
+                        line = line[1:]
+                    patterns.add(line)
+    except FileNotFoundError:
+        pass
+    return patterns
+
+def should_exclude(path: str, exclude_patterns: Set[str]) -> bool:
+    """Check if path matches any ignore pattern"""
+    # Split path into components
+    path_parts = path.split(os.sep)
+    full_path = os.path.normpath(path)
+    
+    for pattern in exclude_patterns:
+        # Check for exact matches
+        if pattern == path or pattern in path_parts:
+            return True
+        # Check for glob pattern matches
+        if fnmatch.fnmatch(full_path, pattern):
+            return True
+    return False
+
+def is_binary_file(filename: str) -> bool:
+    """Check if a file is likely to be binary based on its extension."""
+    return os.path.splitext(filename)[1].lower() in BINARY_EXTENSIONS
+
+def is_likely_binary(filepath: str, sample_size=8000) -> bool:
+    """Check if a file is likely binary by examining its content."""
+    try:
+        with open(filepath, 'rb') as f:
+            sample = f.read(sample_size)
+            if b'\x00' in sample:  # If null bytes exist, likely binary
+                return True
+            # Check if the sample is valid UTF-8
+            try:
+                sample.decode('utf-8')
+                return False  # Successfully decoded, so not binary
+            except UnicodeDecodeError:
+                return True  # Failed to decode, likely binary
+    except:
+        return True  # If we can't open it, assume it's binary
+
+def get_file_content(filepath: str) -> str:
+    """Get the content of a file, handling binary files appropriately."""
+    if is_binary_file(filepath) or is_likely_binary(filepath):
+        return "[Binary file not displayed]"
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+            return f.read()
+    except Exception as e:
+        return f"[Error reading file: {str(e)}]"
+
+# ===== TREE GENERATION =====
+
+def generate_tree(startpath: str, exclude_patterns: Set[str], prefix: str = '') -> List[str]:
+    """Generate a tree representation of the directory structure."""
+    tree = []
+    files = sorted(os.listdir(startpath))
+    
+    for f in files:
+        if should_exclude(f, exclude_patterns):
+            continue
+            
+        path = os.path.join(startpath, f)
+        if os.path.isdir(path):
+            # Add directory
+            tree.append(f'{prefix}├── {f}')
+            # Recursively add subdirectories
+            subtree = generate_tree(path, exclude_patterns, prefix + '│   ')
+            tree.extend(subtree)
+        else:
+            tree.append(f'{prefix}├── {f}')
+            
+    return tree
+
+# ===== SNAPSHOT CREATION =====
+
+def create_snapshot(
+    directory: str = ".", 
+    output_file: str = "codebase_snapshot.md",
+    include_markdown: bool = False
+) -> None:
+    """
+    Create a snapshot of the codebase with XML-like tags for file encapsulation.
+    
+    Args:
+        directory: Root directory to start from
+        output_file: Output file path
+        include_markdown: Whether to include markdown files
+    """
+    exclude_files = set(DEFAULT_EXCLUDE_FILES)
+    exclude_dirs = set(DEFAULT_EXCLUDE_DIRS)
+    
+    # Add the output file to exclude files
+    exclude_files.add(os.path.basename(output_file))
+    
+    # Combine exclude patterns
+    exclude_patterns = load_ignore_patterns(exclude_files, exclude_dirs)
+    
+    # Files to include in the snapshot
+    included_files = []
+    
+    # Build the list of included files
+    for root, dirs, files in os.walk(directory):
+        # Process each file
+        for file in sorted(files):
+            filepath = os.path.join(root, file)
+            rel_path = os.path.relpath(filepath, directory)
+            
+            # Skip excluded files
+            if should_exclude(rel_path, exclude_patterns):
+                continue
+                
+            # Skip markdown files if not including them
+            if not include_markdown and file.lower().endswith('.md'):
+                continue
+                
+            included_files.append((rel_path, filepath))
+    
+    # Generate the tree structure
+    tree_lines = generate_tree(directory, exclude_patterns)
+    
+    # Write the output file
+    with open(output_file, "w", encoding="utf-8") as f:
+        # Write tree structure
+        f.write("<project_structure>\n")
+        f.write("\n".join(tree_lines))
+        f.write("\n</project_structure>\n\n")
+        
+        # Write file contents
+        files_processed = 0
+        errors = 0
+        
+        for rel_path, filepath in included_files:
+            try:
+                # Skip files larger than 10MB
+                file_size = os.path.getsize(filepath)
+                if file_size > 10 * 1024 * 1024:
+                    f.write(f'<file path="{rel_path}">\n')
+                    f.write(f"[File too large: {file_size/1024/1024:.2f}MB]\n")
+                    f.write(f"</file>\n\n")
+                    continue
+                
+                # Get file extension for language detection
+                file_ext = os.path.splitext(rel_path)[1]
+                language = get_language(file_ext)
+                
+                # Read and write the file content
+                content = get_file_content(filepath)
+                f.write(f'<file path="{rel_path}">\n')
+                f.write(f"```{language}\n")
+                f.write(f"{content}\n")
+                f.write("```\n")
+                f.write(f"</file>\n\n")
+                files_processed += 1
+                
+            except Exception as e:
+                errors += 1
+                f.write(f'<file path="{rel_path}">\n')
+                f.write(f"```\n[Error reading file: {str(e)}]\n```\n")
+                f.write(f"</file>\n\n")
+    
+    print(f"Done - saved to {output_file}")
+    print(f"Processed {files_processed} files with {errors} errors")
+
+# ===== COMMAND LINE INTERFACE =====
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Generate a snapshot of the codebase")
+    parser.add_argument(
+        "-d", "--directory", 
+        default=".", 
+        help="Root directory to start from (default: current directory)"
+    )
+    parser.add_argument(
+        "-o", "--output", 
+        default="codebase_snapshot.md", 
+        help="Output file path (default: codebase_snapshot.md)"
+    )
+    parser.add_argument(
+        "-m", "--markdown", 
+        action="store_true", 
+        help="Include markdown files"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Print verbose output"
+    )
+    return parser.parse_args()
+
+# ===== MAIN FUNCTION =====
+
+def main():
+    """Main entry point."""
+    args = parse_args()
+    create_snapshot(
+        directory=args.directory,
+        output_file=args.output,
+        include_markdown=args.markdown
+    )
+
+if __name__ == "__main__":
+    main()
