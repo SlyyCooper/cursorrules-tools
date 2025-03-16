@@ -57,7 +57,7 @@ This repository contains five specialized tools to help developers get the most 
 ./ci --help
 ```
 
-### 3. `codebase`
+### 3. `cb` (Codebase)
 
 **Purpose**: Generates comprehensive snapshots of your codebase in a structured format with XML-like tags, providing better context for AI tools.
 
@@ -71,16 +71,16 @@ This repository contains five specialized tools to help developers get the most 
 **Usage**:
 ```bash
 # Generate a snapshot with default settings
-./codebase
+./cb
 
 # Specify a different directory and output file
-./codebase -d /path/to/project -o output.md
+./cb -d /path/to/project -o output.md
 
 # Include markdown files in the snapshot
-./codebase -m
+./cb -m
 
 # Show verbose output
-./codebase -v
+./cb -v
 ```
 
 ### 4. `analyze_dependencies`
@@ -138,7 +138,7 @@ cd cursorrules-tools
 pip install requests questionary html2text rich anthropic
 
 # Make scripts executable
-chmod +x ci cr codebase analyze_dependencies url-to-md
+chmod +x ci cr cb analyze_dependencies url-to-md
 ```
 
 ## Requirements
@@ -152,7 +152,7 @@ chmod +x ci cr codebase analyze_dependencies url-to-md
 
 Cursor IDE uses AI to understand your codebase and provide intelligent code suggestions. These tools enhance that experience by:
 
-1. **Providing Better Context**: The `cr` and `codebase` tools give Cursor's AI more information about your project structure.
+1. **Providing Better Context**: The `cr` and `cb` tools give Cursor's AI more information about your project structure.
 2. **Focusing AI Analysis**: The `ci` tool helps exclude irrelevant files from analysis.
 3. **Maintaining Dependencies**: The `analyze_dependencies` tool helps keep your project dependencies up-to-date.
 4. **Improving Documentation**: The `url-to-md` tool helps create Markdown documentation from web content.
