@@ -124,6 +124,29 @@ This repository contains five specialized tools to help developers get the most 
 # - Configure conversion options
 ```
 
+### 6. `CRS-1_prompt.md`
+
+**Purpose**: A comprehensive prompt template designed to work with your codebase snapshot to generate custom `.cursorrules` files.
+
+**Features**:
+- Follows the Cursor Rules Specification (CRS-1) format
+- Helps AI models understand how to create effective `.cursorrules` files
+- Structures the rules with identity establishment, technical constraints, and more
+- Provides clear guidelines for AI behavior and knowledge framework
+- Works perfectly with the output from the `cb` tool
+
+**Usage**:
+1. Generate a codebase snapshot using the `cb` tool
+2. Provide both the codebase snapshot and the `CRS-1_prompt.md` to a chatbot (like ChatGPT or Claude)
+3. The AI will analyze your codebase and generate a custom `.cursorrules` file tailored to your project
+
+```bash
+# First, generate your codebase snapshot
+./cb -o my-codebase-snapshot.md
+
+# Then, provide both files to a chatbot (chatGPT, Claude, etc.)
+```
+
 ## Installation
 
 1. Clone the repository:
@@ -157,6 +180,18 @@ Cursor IDE uses AI to understand your codebase and provide intelligent code sugg
 3. **Maintaining Dependencies**: The `analyze_dependencies` tool helps keep your project dependencies up-to-date.
 4. **Improving Documentation**: The `url-to-md` tool helps create Markdown documentation from web content.
 5. **Codebase Snapshot**: The `cb` tool creates a snapshot of your codebase with XML-like tags to easily share your project with chatbots like chatGPT or Claude.
+6. **Custom Rules Generation**: The `CRS-1_prompt.md` works with your codebase snapshot to help chatbots like ChatGPT or Claude generate tailored `.cursorrules` files that optimize Cursor's AI capabilities for your specific project.
+
+## The Power of Custom Cursor Rules
+
+The `.cursorrules` file is a powerful feature of Cursor IDE that acts as a persistent context provider for the AI assistant. By creating a custom `.cursorrules` file tailored to your project:
+
+- The AI understands your project's architecture and patterns
+- Code suggestions become more relevant and consistent
+- The AI follows your preferred coding style and best practices
+- Development becomes more efficient with context-aware assistance
+
+The combination of the `cb` tool and the `CRS-1_prompt.md` makes it easy to create sophisticated `.cursorrules` files without being an expert in prompt engineering.
 
 ## Contributing
 
